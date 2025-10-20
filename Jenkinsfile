@@ -1,11 +1,11 @@
 pipeline {
     agent any
 
-    // 🔧 Configuración para entorno macOS (Homebrew + Docker Desktop)
+    // 🔧 Configuración genérica para macOS
     environment {
-        PATH = "/opt/homebrew/bin:${env.PATH}"                          // Añade binarios de Homebrew
-        DOCKER_HOST = "unix:///Users/alberto/.docker/run/docker.sock"   // Ruta al socket de Docker Desktop
-        COMPOSE_PROJECT_NAME = "adj-demo"                               // Nombre del proyecto Docker Compose
+        // Asegura que Jenkins encuentre docker y docker compose instalados con Homebrew
+        PATH = "/opt/homebrew/bin:${env.PATH}"
+        COMPOSE_PROJECT_NAME = "adj-demo"
     }
 
     stages {
