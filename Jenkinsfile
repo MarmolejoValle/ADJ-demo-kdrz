@@ -1,58 +1,74 @@
 pipeline {
     agent any
 
+    // 🔧 Configuración para entorno macOS (Homebrew + Docker Desktop)
+    environment {
+        PATH = "/opt/homebrew/bin:${env.PATH}"                          // Añade binarios de Homebrew
+        DOCKER_HOST = "unix:///Users/alberto/.docker/run/docker.sock"   // Ruta al socket de Docker Desktop
+        COMPOSE_PROJECT_NAME = "adj-demo"                               // Nombre del proyecto Docker Compose
+    }
+
     stages {
-        // Etapa para detener los servicios o en todo caso hacer caso omiso si no existen
         stage('Parando los servicios') {
             steps {
-                sh '''
-                    docker-compose -p adj-demo down || true
-                '''
+                script {
+                    echo "🛑 Deteniendo servicios anteriores..."
+                    sh '''
+                        set +e
+                        docker compose -p $COMPOSE_PROJECT_NAME down || true
+                        set -e
+                    '''
+                }
             }
         }
 
-        // Eliminar las imagenes creadas por este proyecto
-        stage('Eliminando imagenes anteriores') {
+        stage('Eliminando imágenes anteriores') {
             steps {
-                sh '''
-                    IMAGES=$(docker images --filter "label=com.docker.compose.project=adj-demo" -q)
-                    if [ -n "$IMAGES" ]; then
-                        docker rmi -f $IMAGES || true
-                    else
-                        echo "No hay imagenes para eliminar"
-                    fi
-                '''
+                script {
+                    echo "🧹 Eliminando imágenes antiguas..."
+                    sh '''
+                        set +e
+                        IMAGES=$(docker images --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME" -q)
+                        if [ -n "$IMAGES" ]; then
+                            echo "Eliminando imágenes del proyecto $COMPOSE_PROJECT_NAME..."
+                            docker rmi -f $IMAGES || true
+                        else
+                            echo "No hay imágenes para eliminar."
+                        fi
+                        set -e
+                    '''
+                }
             }
         }
 
-        // Del recurso SCM configurado en el job, jala el repositorio
         stage('Clonando el repositorio') {
             steps {
+                echo "📥 Descargando el código fuente desde SCM..."
                 checkout scm
             }
         }
 
-        // Construir y levantar los servicios
         stage('Construyendo y levantando los servicios') {
             steps {
-                sh '''
-                    docker-compose up --build -d
-                '''
+                script {
+                    echo "🚀 Construyendo y levantando contenedores..."
+                    sh '''
+                        docker compose -p $COMPOSE_PROJECT_NAME up --build -d
+                    '''
+                }
             }
         }
     }
-    
+
     post {
         success {
-            echo 'El pipeline se ejecutó correctamente.'
+            echo '✅ El pipeline se ejecutó correctamente.'
         }
-
         failure {
-            echo 'El pipeline falló.'
+            echo '❌ El pipeline falló.'
         }
-
         always {
-            echo 'El pipeline ha finalizado.'
+            echo '🔄 El pipeline ha finalizado.'
         }
     }
 }
